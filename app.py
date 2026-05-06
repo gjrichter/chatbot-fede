@@ -49,17 +49,23 @@ def chat():
     if not user_message:
         return jsonify({"error": "Messaggio vuoto"}), 400
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages += history + [{"role": "user", "content": user_message}]
+    try:
+        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        messages += history + [{"role": "user", "content": user_message}]
 
-    response = client.chat.complete(
-        model="mistral-large-latest",
-        max_tokens=1024,
-        messages=messages,
-    )
+        response = client.chat.complete(
+            model="mistral-large-latest",
+            max_tokens=1024,
+            messages=messages,
+        )
 
-    assistant_reply = response.choices[0].message.content
-    return jsonify({"response": assistant_reply})
+        assistant_reply = response.choices[0].message.content
+        return jsonify({"response": assistant_reply})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/reset", methods=["POST"])
