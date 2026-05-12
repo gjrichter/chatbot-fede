@@ -217,6 +217,27 @@
     .message.bot pre { background: #f0f0f0; border-radius: 6px; padding: 10px; overflow-x: auto; margin: 6px 0; }
     .message.bot pre code { background: none; padding: 0; }
     .message.bot blockquote { border-left: 3px solid #c0392b; margin: 6px 0; padding-left: 10px; color: #555; }
+
+    /* Copy button */
+    .message.bot { position: relative; }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 3px 6px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s;
+      font-size: 0.75rem;
+      color: #888;
+      line-height: 1;
+    }
+    .message.bot:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { background: #f0f0f0; color: #333; border-color: #bbb; }
+    .copy-btn.copied { color: #27ae60; border-color: #27ae60; opacity: 1; }
   </style>
 </head>
 <body>
@@ -279,9 +300,29 @@
     const div = document.createElement('div');
     div.className = `message ${role}`;
     div.innerHTML = formatText(text);
+    if (role === 'bot') {
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.title = 'Copia risposta';
+      btn.innerHTML = '⎘ Copia';
+      btn.onclick = () => copyMessage(btn, div);
+      div.appendChild(btn);
+    }
     chatContainer.appendChild(div);
     chatContainer.scrollTop = chatContainer.scrollHeight;
     return div;
+  }
+
+  function copyMessage(btn, div) {
+    const text = div.innerText.replace('⎘ Copia', '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerHTML = '✓ Copiato';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = '⎘ Copia';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
   }
 
   function formatText(text) {
