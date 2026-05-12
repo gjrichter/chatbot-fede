@@ -77,7 +77,11 @@ def chat():
             traceback.print_exc()
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-    return Response(stream_with_context(generate()), content_type="text/event-stream")
+    resp = Response(stream_with_context(generate()), content_type="text/event-stream")
+    resp.headers["X-Accel-Buffering"] = "no"
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["Connection"] = "keep-alive"
+    return resp
 
 
 @app.route("/reset", methods=["POST"])
