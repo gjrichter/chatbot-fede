@@ -1,5 +1,6 @@
 import os
-from flask import Flask, render_template, request, jsonify, session
+import json
+from flask import Flask, render_template, request, jsonify, session, Response, stream_with_context
 from mistralai import Mistral
 from pypdf import PdfReader
 import secrets
@@ -55,24 +56,28 @@ def chat():
     if not user_message:
         return jsonify({"error": "Messaggio vuoto"}), 400
 
-    try:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        messages += history + [{"role": "user", "content": user_message}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages += history + [{"role": "user", "content": user_message}]
 
-        response = client.chat.complete(
-            model="mistral-large-latest",
-            max_tokens=1024,
-            temperature=0,
-            messages=messages,
-        )
+    def generate():
+        try:
+            with client.chat.stream(
+                model="mistral-large-latest",
+                max_tokens=1024,
+                temperature=0,
+                messages=messages,
+            ) as stream:
+                for chunk in stream:
+                    delta = chunk.data.choices[0].delta.content
+                    if delta:
+                        yield f"data: {json.dumps({'token': delta})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-        assistant_reply = response.choices[0].message.content
-        return jsonify({"response": assistant_reply})
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+    return Response(stream_with_context(generate()), content_type="text/event-stream")
 
 
 @app.route("/reset", methods=["POST"])
